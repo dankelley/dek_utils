@@ -3,16 +3,17 @@ import sys
 import hashlib
 import os
 import shutil
-
+from re import sub
 
 def main():
-    archive = "~/archive"
+    archive = os.path.expanduser("~/archive")
+    index_file = archive + "/index.csv"
     if len(sys.argv) != 2 and len(sys.argv) != 3:
         print("usage: a file [\"comment\"]")
         sys.exit(2)
     if len(sys.argv) > 1:
-        filename = sys.argv[1]
-        name, extension = os.path.splitext(filename)
+        file = sys.argv[1]
+        file_name, file_extension = os.path.splitext(file)
         #print("filename  %s" % filename)
         #print("name      %s" % name)
         #print("extension %s" % extension)
@@ -21,16 +22,32 @@ def main():
         else:
             comment = ""
         cwd = os.getcwd()
-        path = cwd + "/" + filename
+        path = cwd + "/" + file
         hash = str(hashlib.sha1(str(path).encode('utf-8')).hexdigest())[:6]
-        destination = archive + "/" + str(hash) + extension
-        print("PATH:        %s" % path)
-        print("HASH:        %s" % hash)
-        print("COMMENT:     %s" % comment)
-        print("DESTINATION: %s" % destination)
+        destination = os.path.expanduser(archive + "/" + str(hash) + file_extension)
+        print("PATH:            %s" % path)
+        print("HASH:            %s" % hash)
+        print("COMMENT:         %s" % comment)
+        print("DESTINATION:     %s" % destination)
+        print("INDEX:           %s" % index_file)
+        msg = sub(".*/", "", destination) + "," + path + "," + comment
+        shutil.copy(path, destination)
+        print("want to write: " + msg)
+        index_file = archive + "/index.csv"
+        print("index_file=%s" % index_file)
+        if not os.path.exists(index_file):
+            f = open(index_file, "w")
+            f.write("name,original,comment\n")
+            f.close()
+            print("created %s and added a header line" % index_file)
+        f = open(index_file, "a")
+        f.write(msg + "\n")
+        f.close()
+        print("added following to the index file:\n%s" % msg)
     else:
         print("must name a file")
         sys.exit(2)
 
 if __name__ == "__main__":
     main()
+    print("FIXME: do not add index item if hash is already present")

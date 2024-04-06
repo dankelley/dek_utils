@@ -14,10 +14,10 @@ def main():
         sys.exit(2)
     if len(sys.argv) > 1:
         file = sys.argv[1]
+        if not os.path.isfile(file):
+            print("file %s does not exist" % file)
+            sys.exit(2)
         file_name, file_extension = os.path.splitext(file)
-        #print("filename  %s" % filename)
-        #print("name      %s" % name)
-        #print("extension %s" % extension)
         if (len(sys.argv) == 3):
             comment = sys.argv[2]
         else:
@@ -27,7 +27,6 @@ def main():
         hash = str(hashlib.sha1(str(path).encode('utf-8')).hexdigest())[:6]
         destination = os.path.expanduser(archive + "/" + str(hash) + file_extension)
         print("Original File:    %s" % path)
-        print("                  %s" % path_tilde)
         print("Destination File: %s" % destination)
         print("Index File:       %s" % index_file)
         print("Comment:          %s" % comment)
@@ -41,22 +40,28 @@ def main():
             f.write("File Name,Original File Name,Archive Time,Comment\n")
             f.close()
             print("-- Created %s and added a header line to it." % index_file)
-        # Only add an item if it is not already listed in the index
-        # FIXME: maybe permit updating?
-        already_archived = False
+        # Append or update index
+        index_file_new = index_file + "-new"
+        fnew = open(index_file_new, "w")
+        replaced = False
         with open(index_file, "r") as f:
-            if destination_file in f.read():
-                already_archived = True
-        if already_archived:
-            print("-- File already in archive: file copied but index unaltered (FIXME).")
-        else:
-            f = open(index_file, "a")
-            f.write(msg + "\n")
-            f.close()
-            print("-- Add an item to index file %s." % index_file)
+            for line in f:
+                # FIXME: better to just check the first comma-separated item
+                if destination_file in line:
+                    fnew.write(msg + '\n')
+                    replaced = True
+                    print("-- updating existing index entry")
+                else:
+                    fnew.write(line)
+        if not replaced:
+            print("-- adding existing index entry")
+            fnew.write(msg + '\n')
+        fnew.close()
+        shutil.move(index_file_new, index_file)
     else:
         print("must name a file")
         sys.exit(2)
 
 if __name__ == "__main__":
     main()
+    print("NOTE: ought to check for hash collisions (FIXME)")

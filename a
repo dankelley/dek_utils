@@ -4,6 +4,7 @@ import hashlib
 import os
 import shutil
 from re import sub
+from time import strftime
 
 def main():
     archive = os.path.expanduser("~/archive")
@@ -21,37 +22,38 @@ def main():
             comment = sys.argv[2]
         else:
             comment = ""
-        cwd = os.getcwd()
-        path = cwd + "/" + file
+        path = os.getcwd() + "/" + file
+        path_tilde = sub(os.path.expanduser("~"), "~", path)
         hash = str(hashlib.sha1(str(path).encode('utf-8')).hexdigest())[:6]
         destination = os.path.expanduser(archive + "/" + str(hash) + file_extension)
         print("Original File:    %s" % path)
+        print("                  %s" % path_tilde)
         print("Destination File: %s" % destination)
         print("Index File:       %s" % index_file)
         print("Comment:          %s" % comment)
         destination_file = sub(".*/", "", destination)
-        msg = destination_file + "," + path + "," + comment
+        time = strftime("%Y-%m-%dT%H:%M:%S")
+        msg = destination_file + "," + path_tilde + "," + time + "," + comment
         shutil.copy(path, destination)
-        # Create the index file, if it does not exist already; add
-        # a header, too.
-        #<>print("want to write: " + msg)
+        # Create the index file, if it does not exist already.
         if not os.path.exists(index_file):
             f = open(index_file, "w")
-            f.write("name,original,comment\n")
+            f.write("File Name,Original File Name,Archive Time,Comment\n")
             f.close()
-            print(" -- created %s and added a header line to it." % index_file)
+            print("-- Created %s and added a header line to it." % index_file)
         # Only add an item if it is not already listed in the index
+        # FIXME: maybe permit updating?
         already_archived = False
         with open(index_file, "r") as f:
             if destination_file in f.read():
                 already_archived = True
         if already_archived:
-            print("-- file was already archive: file copied but index unaltered")
+            print("-- File already in archive: file copied but index unaltered (FIXME).")
         else:
             f = open(index_file, "a")
             f.write(msg + "\n")
             f.close()
-            print("-- an item to index file %s" % index_file)
+            print("-- Add an item to index file %s." % index_file)
     else:
         print("must name a file")
         sys.exit(2)

@@ -24,7 +24,7 @@ def main():
             comment = ""
         path = os.getcwd() + "/" + file
         path_tilde = sub(os.path.expanduser("~"), "~", path)
-        hash = str(hashlib.sha1(str(path).encode('utf-8')).hexdigest())[:6]
+        hash = str(hashlib.sha1(str(path).encode('utf-8')).hexdigest())[:7]
         destination = os.path.expanduser(archive + "/" + str(hash) + file_extension)
         print("Original File:    %s" % path)
         print("Destination File: %s" % destination)
@@ -54,7 +54,7 @@ def main():
                 else:
                     fnew.write(line)
         if not replaced:
-            print("-- adding existing index entry")
+            print("-- adding a new index entry")
             fnew.write(msg + '\n')
         fnew.close()
         shutil.move(index_file_new, index_file)

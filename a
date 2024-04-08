@@ -5,62 +5,64 @@ import os
 import shutil
 from re import sub
 from time import strftime
+import argparse
 
 def main():
+    parser = argparse.ArgumentParser(description = 'Archive a file, by renaming it with a hash code (followed by the original name, unless -b is used), and then copying it to ~/archive, and also adding a line to the file ~/archive/index.csv.')
+    parser.add_argument('-b', action='store_true', default = False, help = 'use just the hash code in the resultant file, without appending the filename.')
+    parser.add_argument('file', help = 'name of the file to be archived')
+    parser.add_argument('comment', nargs = '?', default = '', help = 'optional comment to be stored in the ~/archive/index.csv file')
+    args = parser.parse_args()
+    file = args.file
+    comment = args.comment
     archive = os.path.expanduser("~/archive")
+    # https://docs.python.org/3/library/argparse.html
     index_file = archive + "/index.csv"
-    if len(sys.argv) != 2 and len(sys.argv) != 3:
-        print("usage: a file [\"comment\"]")
+    if not os.path.isfile(file):
+        print("file %s does not exist" % file)
         sys.exit(2)
-    if len(sys.argv) > 1:
-        file = sys.argv[1]
-        if not os.path.isfile(file):
-            print("file %s does not exist" % file)
-            sys.exit(2)
-        file_name, file_extension = os.path.splitext(file)
-        if (len(sys.argv) == 3):
-            comment = sys.argv[2]
-        else:
-            comment = ""
-        path = os.getcwd() + "/" + file
-        path_tilde = sub(os.path.expanduser("~"), "~", path)
-        hash = str(hashlib.sha1(str(path).encode('utf-8')).hexdigest())[:7]
+    file_name, file_extension = os.path.splitext(file)
+    # We ignore the extension so e.g. a.R and a.png will get the same hash
+    path = os.getcwd() + "/" + file
+    path_tilde = sub(os.path.expanduser("~"), "~", path)
+    path_without_extension, junk = os.path.splitext(path_tilde)
+    hash = str(hashlib.sha1(str(path_without_extension).encode('utf-8')).hexdigest())[:7]
+    if args.b:
         destination = os.path.expanduser(archive + "/" + str(hash) + file_extension)
-        print("Original File:    %s" % path)
-        print("Destination File: %s" % destination)
-        print("Index File:       %s" % index_file)
-        print("Comment:          %s" % comment)
-        destination_file = sub(".*/", "", destination)
-        time = strftime("%Y-%m-%dT%H:%M:%S")
-        msg = destination_file + "," + path_tilde + "," + time + "," + comment
-        shutil.copy(path, destination)
-        # Create the index file, if it does not exist already.
-        if not os.path.exists(index_file):
-            f = open(index_file, "w")
-            f.write("File Name,Original File Name,Archive Time,Comment\n")
-            f.close()
-            print("-- Created %s and added a header line to it." % index_file)
-        # Append or update index
-        index_file_new = index_file + "-new"
-        fnew = open(index_file_new, "w")
-        replaced = False
-        with open(index_file, "r") as f:
-            for line in f:
-                # FIXME: better to just check the first comma-separated item
-                if destination_file in line:
-                    fnew.write(msg + '\n')
-                    replaced = True
-                    print("-- updating existing index entry")
-                else:
-                    fnew.write(line)
-        if not replaced:
-            print("-- adding a new index entry")
-            fnew.write(msg + '\n')
-        fnew.close()
-        shutil.move(index_file_new, index_file)
     else:
-        print("must name a file")
-        sys.exit(2)
+        destination = os.path.expanduser(archive + "/" + str(hash) + '_' + file_name + file_extension)
+    print("Original File:    %s" % path)
+    print("Destination File: %s" % destination)
+    print("Index File:       %s" % index_file)
+    print("Comment:          %s" % comment)
+    destination_file = sub(".*/", "", destination)
+    time = strftime("%Y-%m-%dT%H:%M:%S")
+    msg = destination_file + "," + path_tilde + "," + time + "," + comment
+    shutil.copy(path, destination)
+    # Create the index file, if it does not exist already.
+    if not os.path.exists(index_file):
+        f = open(index_file, "w")
+        f.write("File Name,Original File Name,Archive Time,Comment\n")
+        f.close()
+        print("-- Created %s and added a header line to it." % index_file)
+    # Append or update index
+    index_file_new = index_file + "-new"
+    fnew = open(index_file_new, "w")
+    replaced = False
+    with open(index_file, "r") as f:
+        for line in f:
+            # FIXME: better to just check the first comma-separated item
+            if destination_file in line:
+                fnew.write(msg + '\n')
+                replaced = True
+                print("-- updating existing index entry")
+            else:
+                fnew.write(line)
+    if not replaced:
+        print("-- adding a new index entry")
+        fnew.write(msg + '\n')
+    fnew.close()
+    shutil.move(index_file_new, index_file)
 
 if __name__ == "__main__":
     main()

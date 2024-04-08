@@ -22,7 +22,7 @@ def main():
         print("file %s does not exist" % file)
         sys.exit(2)
     file_name, file_extension = os.path.splitext(file)
-    # We ignore the extension so e.g. a.R and a.png will get the same hash
+    # Ignore file extension so e.g. a.R and a.png get identical hashes
     path = os.getcwd() + "/" + file
     path_tilde = sub(os.path.expanduser("~"), "~", path)
     path_without_extension, junk = os.path.splitext(path_tilde)
@@ -51,7 +51,6 @@ def main():
     replaced = False
     with open(index_file, "r") as f:
         for line in f:
-            # FIXME: better to just check the first comma-separated item
             if destination_file in line:
                 fnew.write(msg + '\n')
                 replaced = True
@@ -61,6 +60,7 @@ def main():
     if not replaced:
         print("-- adding a new index entry")
         fnew.write(msg + '\n')
+    # finalize index file
     fnew.close()
     shutil.move(index_file_new, index_file)
 
